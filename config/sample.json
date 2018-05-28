@@ -1,0 +1,30 @@
+{
+  "port": 8080,
+  "http": false,
+  "bigquery_files_destination": "../../bigquery_files/",
+  "secret_key": "SECRET KEY HERE",
+  "sql_db": {
+    "read": {
+      "connectionLimit": 10,
+      "host": "host address",
+      "user": "username",
+      "password": "password",
+      "database":"default db"
+    },
+    "write": {
+      "connectionLimit": 10,
+      "host": "host address",
+      "user": "username",
+      "password": "password",
+      "database":"default db"
+    }
+  },
+  "mailer": {
+    "api_key": "mandrill_api_key_here"
+  },
+  "redisOptions": {
+    "host": "localhost",
+    "port": 6379,
+    "db": 0
+  }
+}

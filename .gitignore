@@ -1,0 +1,11 @@
+.idea
+.DS_Store
+config/*
+!config/sample.json
+!config/db-schema.sql
+node_modules/*
+*.iml
+package-lock.json
+env
+excel_exports/*
+bigquery_files/*
