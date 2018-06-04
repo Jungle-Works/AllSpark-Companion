@@ -1,10 +1,13 @@
 const zlib = require('zlib');
 const mysql = require('./mysql').MySQL;
 const fs = require('fs');
+const crypto = require('crypto');
 const pathSeparator = require('path').sep;
 const {resolve} = require('path');
 const commonFun = require('./commonFunctions');
 const assert = require("assert");
+
+const gitChecksum = require('child_process').execSync('git rev-parse --short HEAD').toString().trim();
 
 class API {
 
@@ -45,7 +48,7 @@ class API {
 		walk(__dirname + '/../www');
 	}
 
-	static serve() {
+	static serve(clientEndpoint) {
 
 		return async function (request, response, next) {
 
@@ -57,15 +60,22 @@ class API {
 					url = request.url.replace(/\//g, pathSeparator),
 					path = resolve(__dirname + '/../www') + pathSeparator + url.substring(4, url.indexOf('?') < 0 ? undefined : url.indexOf('?'));
 
-				if (!API.endpoints.has(path)) {
+				if (!API.endpoints.has(path) && !clientEndpoint) {
 					return next();
 				}
 
-				obj = new (API.endpoints.get(path))();
+				let endpoint = clientEndpoint || API.endpoints.get(path);
+
+				obj = new endpoint();
 
 				obj.request = request;
 				obj.response = response;
 				obj.assert = assertExpression;
+				obj.checksum = gitChecksum;
+
+				if (clientEndpoint) {
+					return response.send(await obj.body());
+				}
 
 				const result = await obj[path.split(pathSeparator).pop()]();
 
