@@ -77,7 +77,8 @@ class API {
 					return response.send(await obj.body());
 				}
 
-				const result = await obj[path.split(pathSeparator).pop()]();
+				const params = {...request.query, ...request.body};
+				const result = await obj[path.split(pathSeparator).pop()](params);
 
 				obj.result = {
 					status: result ? true : false,
