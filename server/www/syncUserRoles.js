@@ -32,7 +32,10 @@ class SyncUserRoles extends API {
 		await this.syncUserRoles();
 		await this.deleteNonExistingUserRoles();
 
-		return this.user;
+		return {
+			user: this.user,
+			user_categories: this.userCategories
+		};
 	}
 
 	async fetchAccount() {
