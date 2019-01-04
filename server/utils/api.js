@@ -147,15 +147,14 @@ class API {
 		});
 	}
 
-}
+	assert(expression, message, statusCode) {
 
-function assertExpression(expression, message, statusCode) {
-
-	return assert(expression,
-		JSON.stringify({
-			message: message,
-			status: statusCode,
-		}));
+		return assert(expression,
+			JSON.stringify({
+				message: message,
+				status: statusCode,
+			}));
+	}
 }
 
 API.Exception = class {
