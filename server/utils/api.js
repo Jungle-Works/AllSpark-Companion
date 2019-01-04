@@ -6,6 +6,7 @@ const pathSeparator = require('path').sep;
 const {resolve} = require('path');
 const commonFun = require('./commonFunctions');
 const assert = require("assert");
+const child_process = require('child_process');
 
 const environment = {
 	name: process.env.NODE_ENV,
