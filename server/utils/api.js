@@ -7,13 +7,19 @@ const {resolve} = require('path');
 const commonFun = require('./commonFunctions');
 const assert = require("assert");
 
-const gitChecksum = require('child_process').execSync('git rev-parse --short HEAD').toString().trim();
+const environment = {
+	name: process.env.NODE_ENV,
+	deployed_on: new Date(),
+	gitChecksum: child_process.execSync('git rev-parse --short HEAD').toString().trim(),
+	branch: child_process.execSync('git rev-parse --abbrev-ref HEAD').toString().trim(),
+};
 
 class API {
 
 	constructor() {
 
 		this.mysql = mysql;
+		this.environment = environment;
 	}
 
 	static setup() {
@@ -61,6 +67,7 @@ class API {
 					path = resolve(__dirname + '/../www') + pathSeparator + url.substring(4, url.indexOf('?') < 0 ? undefined : url.indexOf('?'));
 
 				if (!API.endpoints.has(path) && !clientEndpoint) {
+
 					return next();
 				}
 
@@ -70,8 +77,8 @@ class API {
 
 				obj.request = request;
 				obj.response = response;
-				obj.assert = assertExpression;
-				obj.checksum = gitChecksum;
+
+				obj.checksum = environment.gitChecksum;
 
 				if (clientEndpoint) {
 					return response.send(await obj.body());
