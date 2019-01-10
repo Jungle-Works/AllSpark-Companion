@@ -73,7 +73,8 @@ class SyncUserRoles extends API {
 			VALUES (?, ?, ?, ?, ?, "not a password", 1)
 			ON DUPLICATE KEY UPDATE 
 				first_name = VALUES(first_name),
-				last_name = VALUES(last_name)
+				last_name = VALUES(last_name),
+				status = VALUES(status)
 			`,
 			[
 				this.account.account_id,
