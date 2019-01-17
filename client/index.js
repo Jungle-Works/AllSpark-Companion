@@ -55,9 +55,9 @@ class HTMLAPI extends API {
 					</header>
 
 					<nav>
-						<a href="/kato"><i class="fas fa-home"></i> Home</a>
-						<a href="/kato/compare-schema"><i class="fas fa-exchange-alt"></i> Compare Schema</a>
-						<a href="/kato/get-schema"><i class="fas fa-database"></i> Get Schema</a>
+						<a href="/allspark"><i class="fas fa-home"></i> Home</a>
+						<a href="/allspark/compare-schema"><i class="fas fa-exchange-alt"></i> Compare Schema</a>
+						<a href="/allspark/get-schema"><i class="fas fa-database"></i> Get Schema</a>
 					</nav>
 
 					<main>
