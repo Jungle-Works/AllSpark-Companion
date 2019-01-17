@@ -26,5 +26,19 @@
     "host": "localhost",
     "port": 6379,
     "db": 0
+  },
+  "compare_schema": {
+    "remote" : {
+      "host": "Remote host",
+      "user": "username",
+      "password": "password",
+      "database": "database"
+    },
+    "local" : {
+      "host": "Second host",
+      "user": "username",
+      "password": "password",
+      "database":"database"
+    }
   }
 }
