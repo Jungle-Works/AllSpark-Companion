@@ -3,6 +3,7 @@ const path = require('path');
 const logger = require('morgan');
 const cookieParser = require('cookie-parser');
 const bodyParser = require('body-parser');
+const constants = require('./server/utils/constants');
 
 const server = require('./server/routes/index');
 const client = require('./client/index');
@@ -19,9 +20,8 @@ app.use(bodyParser.urlencoded());
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
-
-app.use('/api/', server);
-app.use('/', client);
+app.use(`${constants.base_url}/api/`, server);
+app.use(`${constants.base_url}/`, client);
 
 
 // catch 404 and forward to error handler

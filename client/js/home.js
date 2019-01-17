@@ -1,0 +1,1 @@
+Page.class = class Home extends Page {}

@@ -1,0 +1,31 @@
+main {
+	user-select: text;
+}
+main h2 {
+	margin: 0;
+}
+main .compare-connections {
+	display: grid;
+	grid-gap: 15px
+}
+main .compare-connections .show-configs {
+	display: grid;
+	grid-gap: 15px;
+	grid-template-columns: max-content max-content;
+	background: #fff;
+	padding: 10px;
+}
+	main .compare-connections .remote,
+	main .compare-connections .local {
+		display: grid;
+		grid-template-columns: max-content max-content;
+		grid-gap: 10px;
+	}
+		main .compare-connections .key {
+			color: #aaa;
+		}
+main .result {
+	overflow: auto;
+	background: #fff;
+	padding: 10px;
+}

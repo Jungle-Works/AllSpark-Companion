@@ -55,7 +55,7 @@ class SyncUserRoles extends API {
 			[this.accountUrl]
 		);
 
-	   return account;
+		return account;
 	}
 
 	async syncUser() {
@@ -105,11 +105,11 @@ class SyncUserRoles extends API {
 				continue;
 			}
 
-            categories.push([
+			categories.push([
 				this.account.account_id,
 				category.name,
 				category.slug,
-				0
+				parseFloat(category.is_admin) || 0
 			]);
 		}
 

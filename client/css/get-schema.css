@@ -1,0 +1,27 @@
+main h1 {
+    margin: calc(var(--gap) * 2) 0;
+    font-size: 150%;
+    border-bottom: 1px dashed #999;
+}
+main > div {
+    height: 100%;
+}
+.database-info {
+    display: grid;
+    padding: calc(var(--gap) * 2);
+    grid-gap: calc(var(--gap) * 3);
+    grid-template-columns: repeat(3, max-content);
+    align-items: center;
+    position: sticky;
+    top: 60px;
+    z-index: 5;
+}
+    .database-info button {
+            width: 100px;
+            cursor: pointer;
+    }
+.code-editor {
+    height: 100%;
+    margin-top: calc(var(--gap) * 2);
+    box-shadow: 0 0 25px rgba(0, 0, 0, 0.15);
+}
