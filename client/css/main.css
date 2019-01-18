@@ -1,0 +1,307 @@
+@import url('https://fonts.googleapis.com/css?family=Roboto');
+
+:root {
+	--color-primary: #2a313f;
+	--color-primary-text: #fff;
+	--color-secondary: #ddd;
+	--color-secondary-text: #333;
+	--color-accent:  #1abb9c;
+	--color-accent-text: #fff;
+	--transition-duration: 300ms;
+
+	--gap: 5px;
+}
+* {
+	box-sizing: border-box;
+}
+
+input:not([type=checkbox]):not([type=radio]),
+select,
+button {
+	padding: 5px 10px;
+	background: transparent;
+	height: 28px;
+	outline-width: 2px;
+	font-size: 90%;
+	border: 1px solid #ccc;
+	background: #fff;
+	transition: background var(--transition-duration),
+				color var(--transition-duration),
+				box-shadow var(--transition-duration),
+				border var(--transition-duration);
+}
+input[type=button],
+input[type=reset],
+input[type=submit],
+button,
+select {
+	 padding: 5px 12px;
+}
+input[type=button]:hover,
+input[type=reset]:hover,
+input[type=submit]:hover,
+button:hover {
+	box-shadow: 0 0 25px rgba(0, 0, 0, 0.15);
+	background: var(--color-accent);
+	color: var(--color-accent-text);
+	border-color: var(--color-accent);
+}
+input[type=button]:active,
+input[type=reset]:active,
+input[type=submit]:active,
+select:active,
+button:active {
+	box-shadow: inset 0 0 25px rgba(0, 0, 0, 0.25);
+}
+
+button > i {
+	margin-right: calc(var(--gap) * 1);
+}
+
+input[type=submit] {
+	background: var(--color-accent);
+	color: var(--color-accent-text) ;
+	letter-spacing: 1px;
+}
+
+a {
+	text-decoration: none;
+}
+a:hover {
+	text-decoration: underline;
+	cursor: pointer;
+}
+a:active {
+	color: inherit;
+}
+
+.hidden {
+	display: none !important;
+}
+
+.notice, .warning {
+	padding: 16px;
+	box-shadow: 0 0 15px rgba(0, 0, 0, 0.1);
+	color: #666;
+	border-radius: 0;
+}
+.notice {
+	background: #cfc;
+}
+.warning {
+	background: #f77;
+	color: #fff;
+}
+.warning.site-outdated {
+	text-align: center;
+}
+.NA {
+	color: #666;
+	font-size: 90%;
+}
+
+html, body {
+	height: 100%;
+	font-family: 'Roboto', sans-serif;
+}
+
+body {
+	display: grid;
+	margin: 0 !important;
+	grid-template-columns: 250px 1fr;
+	grid-template-rows: 50px 1fr;
+	background: #eee !important;
+	user-select: none;
+	font-size: 14px !important;
+	color: #222 !important;
+}
+
+	body > #ajax-working {
+		position: fixed;
+		top: 10px;
+		left: calc(50% - 80px);
+		opacity: 0;
+		user-select: none;
+		padding: 5px 10px;
+		font-size: 12px;
+		letter-spacing: 1px;
+		transition: opacity var(--transition-duration);
+		box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+		background: var(--color-accent);
+		color: var(--color-accent-text);
+		width: 80px;
+		z-index: 11;
+	}
+	body > #ajax-working.show {
+		opacity: 1;
+	}
+	body > header {
+		grid-column: 1 / 3;
+		position: sticky;
+		padding: 10px;
+		justify-content: space-between;
+		align-items: center;
+		display: flex;
+		top: 0;
+		background: #2a313f;
+		color: #fff;
+	}
+		body > header h1 {
+			margin: 0;
+			font-size: 130%;
+			display: flex;
+			height: 100%;
+			align-items: center;
+			justify-content: space-between;
+		}
+		body > header #info {
+			text-align: right;
+			display: flex;
+			flex-direction: column;
+		}
+			body > header #info  span {
+				font-size: 90%;
+				color: #ccc;
+			}
+	body > nav {
+		display: flex;
+		flex-direction: column;
+		position: sticky;
+		top: 0;
+	}
+		body > nav a {
+			padding: 10px;
+			display: grid;
+			color: inherit;
+			font-weight: bold;
+			align-items: center;
+			grid-template-columns: 50px 1fr;
+			transition: background var(--transition-duration),
+						box-shadow var(--transition-duration);
+		}
+		body > nav a:hover {
+			background: #ddd;
+			text-decoration: none;
+		}
+		body > nav a:active {
+			box-shadow: inset 0 0 15px rgba(0, 0, 0, 0.3)
+		}
+		body > nav a.selected {
+			box-shadow: inset 10px 0 0 rgba(0, 0, 0, 0.3);
+			background: #ddd;
+		}
+			body > nav a i {
+				text-align: center;
+				color: #666;
+			}
+
+	main {
+		padding: calc(var(--gap) * 2);
+	}
+	main > h1 {
+		margin: calc(var(--gap) * 2) 0;
+		font-size: 150%;
+		border-bottom: 1px dashed #999;
+	}
+	main .block {
+		background: #fff;
+		box-shadow: 0 0 25px rgba(0, 0, 0, 0.15);
+	}
+
+	main section.section {
+		display: none;
+		padding: calc(var(--gap) * 2);
+	}
+	main section.section.show {
+		display: block;
+	}
+		main section .toolbar {
+			background: #eee;
+			display: grid;
+			grid-gap: calc(var(--gap) * 2);
+			grid-auto-columns: max-content;
+			padding: calc(var(--gap) * 2) 0;
+			grid-template-columns: repeat(auto-fit, minmax(75px, max-content));
+		}
+			main .toolbar button {
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+			}
+			main section .export-form {
+				background: #fff;
+				box-shadow: 0 0 25px rgba(0, 0, 0, 0.15);
+				padding: 10px;
+				margin-top: calc(var(--gap) * 2);
+				user-select: text;
+				font-family: monospace;
+				max-height: 150px;
+				overflow: auto;
+			}
+
+	main .loading {
+		margin-top: 100px;
+		height: 70px;
+		background-size: contain;
+	}
+
+	main .section > h1,
+	main .section > h2 {
+		border-bottom: 1px dashed #999;
+		margin: 0;
+		font-size: 130%;
+		text-transform: capitalize;
+	}
+
+	main .form {
+		display: grid;
+		padding: calc(var(--gap) * 2);
+		grid-gap: calc(var(--gap) * 3);
+	}
+		main .form label {
+			display: grid;
+			grid-gap: var(--gap);
+			max-width: 200px;
+			white-space: nowrap;
+		}
+			main .form label > span {
+				font-size: 90%;
+				color: #666;
+				font-weight: bold;
+			}
+
+	table {
+		border-collapse: collapse;
+		width: 100%;
+	}
+		table thead {
+			background: var(--color-primary);
+			color: var(--color-primary-text);
+			font-size: 90%;
+		}
+			table thead tr th {
+				padding: 6px 8px;
+				top: 0px;
+				z-index: 2;
+				font-weight: normal;
+				background: var(--color-primary);
+				color: var(--color-primary-text);
+			}
+			table thead th:last-child {
+				border-right: 0;
+			}
+		table tbody tr {
+			transition: background var(--transition-duration),
+						color var(--transition-duration);
+		}
+		table tbody tr:nth-child(2n) {
+			background: rgba(0, 0, 0, 0.1);
+		}
+		table:not(.static) tbody tr:hover {
+			background: #def;
+			color: var(--color-hover-text);
+		}
+			table td {
+				padding: 8px;
+				position: relative;
+			}
