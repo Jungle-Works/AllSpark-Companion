@@ -573,6 +573,957 @@ class Sections {
 }
 
 /**
+ * A generic implementation for a multiple select dropdown.
+ *
+ * It has the following features.
+ *
+ * - Takes a list of possible values in a specific format [{name, value}]
+ * - Lets users select one or multiple of these values.
+ * - Provides a clean interface with a value getter and setter.
+ * - The input can be disabled as well.
+ */
+class MultiSelect {
+
+	/**
+	 * Create a new instance for the MultiSelect.
+	 *
+	 * @param  Array	options.datalist			The set of possible values for the MultiSelect.
+	 * @param  Boolean	options.multiple			Toggle for allowing the user to select multiple values.
+	 * @param  Boolean	options.expand				Wether the dropdown should float and show when needed or if it should take it's own place and always be visible.
+	 * @param  String	options.dropDownPosition	The position for the dropdown, can be 'top' or 'bottom'.
+	 * @param  String	options.mode				The way to show options, can be 'Collapse', 'Stretch', 'Expand' or 'Open Stretched'
+	 * @param  String	options.name				Appears as a heading in the expand mode.
+	 * @param  String	options.maxSelections		maxSelections limit the selections in the list.
+	 * @param  String	options.disabled			Disabled option to enable the read-only mode.
+	 * @return MultiSelect							The object reference for MultiSelect
+	 */
+	constructor({datalist = [], multiple = true, dropDownPosition = 'bottom', mode = 'collapse', name = '', maxSelections, disabled = false, value = []} = {}) {
+
+		this.callbacks = new Set;
+		this.selectedValues = new Set();
+
+		this.datalist = datalist;
+		this.multiple = multiple;
+		this.maxSelections = maxSelections;
+		this.disabled = disabled;
+		this.dropDownPosition = ['top', 'bottom'].includes(dropDownPosition) ? dropDownPosition : 'bottom';
+		this.inputName = 'multiselect-' + Math.floor(Math.random() * 10000);
+		this.name = name;
+
+		this.mode = MultiSelect.modes.some(x => x.value == mode) ? mode : MultiSelect.modes[0].value;
+		this.value = value;
+	}
+
+	static get modes() {
+
+		return [
+			{
+				name: 'Collapse',
+				value: 'collapse',
+			},
+			{
+				name: 'Stretch',
+				value: 'stretch',
+			},
+			{
+				name: 'Expand',
+				value: 'expand',
+			},
+			{
+				name: 'Open Stretched',
+				value: 'open-stretched',
+			}
+		]
+	}
+
+	/**
+	 * The main container of the MultiSelect.
+	 *
+	 * @return HTMLElement	A div that has the entire content.
+	 */
+	get container() {
+
+		if(this.containerElement) {
+
+			return this.containerElement;
+		}
+
+		const container = this.containerElement = document.createElement('div');
+
+		container.classList.add('multi-select');
+
+		container.innerHTML = `
+			<div class="screen" tabindex="0"></div>
+		`;
+
+		this.screen = container.querySelector('.screen');
+
+		if(this.mode == 'stretch') {
+
+			container.appendChild(this.options);
+			container.classList.add('stretched');
+			this.options.classList.remove('hidden');
+		}
+
+		container.classList.add(this.dropDownPosition);
+
+		this.render();
+
+		this.screen.on('click', e => {
+
+			e.stopPropagation();
+			e.preventDefault();
+
+			if(this.disabled) {
+
+				return;
+			}
+
+			if(!this.optionsContainer) {
+
+				this.container.appendChild(this.options);
+				this.render();
+			}
+
+			if(this.mode == 'expand') {
+
+				this.expand();
+			}
+			else if(this.mode == 'open-stretched') {
+
+				this.container.classList.add('stretched');
+			}
+
+			const optionsHidden = this.options.classList.contains('hidden');
+
+			if(!['stretch', 'expand'].includes(this.mode)) {
+
+				for(const option of document.querySelectorAll('.multi-select:not(.stretched) .options')) {
+
+					option.classList.add('hidden');
+				}
+
+				this.options.classList.toggle('hidden', !optionsHidden);
+			}
+			else {
+
+				this.options.classList.remove('hidden');
+			}
+
+			this.search.globalSearch.container.querySelector('.searchQuery').focus();
+		});
+
+		document.body.on('click', () => {
+
+			this.setScreenText();
+
+			if(!this.optionsContainer) {
+
+				return;
+			}
+
+			this.options.classList.toggle('hidden', !['stretch', 'expand'].includes(this.mode));
+		});
+
+		return container;
+	}
+
+	get options() {
+
+		if(this.optionsContainer) {
+
+			return this.optionsContainer;
+		}
+
+		const options = this.optionsContainer = document.createElement('div');
+		options.classList.add('options', 'hidden');
+
+		this.search = new SearchColumnFilters({
+			data: [...this._datalist.values()],
+			filters: [
+				{
+					key: 'Name',
+					rowValue: row => [row.name],
+				},
+				{
+					key: 'Value',
+					rowValue: row => [row.value],
+				},
+				{
+					key: 'Subtitle',
+					rowValue: row => row.subtitle ? [row.subtitle] : [],
+				},
+			],
+			advancedSearch: true
+		});
+
+		options.innerHTML = `
+			<header>
+				<a class="all">All</a>
+				<a class="clear">Clear</a>
+				<select name="mode">
+					<option value="collapse">Collapse</option>
+					<option value="stretch">Stretch</option>
+					<option value="open-stretched">Open Stretched</option>
+					<option value="expand">Expand</option>
+				</select>
+			</header>
+			<div class="list"></div>
+			<div class="no-matches NA hidden">No data found</div>
+			<footer></footer>
+		`;
+
+		const header = options.querySelector('header');
+
+		header.insertAdjacentElement('beforeend', this.search.container);
+		header.insertAdjacentElement('beforeend', this.search.globalSearch.container);
+
+		options.on('click', e => e.stopPropagation());
+		header.on('click', e => e.preventDefault());
+
+		options.querySelector('header .all').on('click', () => this.all());
+		options.querySelector('header .clear').on('click', () => this.clear());
+
+		this.search.on('change', () => {
+
+			this.filterDataMap = new Map(this.search.filterData.map(x => [x.value, x]));
+			this.recalculate();
+		});
+
+		const mode = options.querySelector('select[name=mode]');
+
+		mode.value = this.mode;
+		mode.disabled = this.disabled;
+
+		mode.on('change', () => {
+
+			if(this.mode == 'expand') {
+
+				this.expandDialog.hide();
+				this.container.appendChild(this.options);
+			}
+
+			this.mode = mode.value;
+
+			this.container.classList.toggle('stretched', ['stretch', 'open-stretched'].includes(this.mode));
+			this.options.classList.toggle('hidden', this.mode == 'collapse');
+
+			if(mode.value == 'expand') {
+
+				this.expand();
+			}
+
+			if(this.search.size > 1) {
+
+				this.reset();
+			}
+
+			this.search.globalSearch.container.querySelector('.searchQuery').focus();
+
+		});
+
+		return options;
+	}
+
+	expand() {
+
+		if(this.disabled || !this._datalist) {
+
+			return;
+		}
+
+		const advancedSearch = this.search.globalSearch.container.querySelector('.advanced');
+
+		if(!this.expandDialog) {
+
+			this.expandDialog = new DialogBox();
+			this.expandDialog.container.classList.add('multi-select-expanded');
+
+			this.expandDialog.on('close', () => {
+
+				if(!this.search.container.classList.contains('hidden')) {
+
+					advancedSearch.click();
+				}
+
+				advancedSearch.classList.add('hidden');
+			});
+
+			this.expandDialog.heading = this.name;
+		}
+
+		this.expandDialog.body.appendChild(this.options);
+		advancedSearch.classList.remove('hidden');
+
+		if(this.search.size > 1) {
+
+			advancedSearch.click();
+		}
+
+		this.options.classList.remove('hidden');
+
+		this.expandDialog.show();
+	}
+
+	/**
+	 * Render the datalist to the MultiSelect.
+	 * Call this externally if you have just updated the datalist after object construction.
+	 */
+	render() {
+
+		if(!this.optionsContainer || !this._datalist || !this._datalist.size) {
+
+			return this.recalculate();
+		}
+
+		this.container.classList.toggle('disabled', this.disabled);
+
+		this.options.querySelector('header .all').classList.toggle('hidden', !this.multiple);
+		this.options.querySelector('header select[name=mode]').disabled = this.disabled;
+		this.search.globalSearch.container.querySelector('.searchQuery').disabled = this.disabled;
+
+		const optionList = this.options.querySelector('.list');
+
+		optionList.textContent = null;
+
+		this.expandDialog = null;
+
+		this.loadList(this.options.querySelector('.list'));
+	}
+
+	loadList(list, data = this._datalist) {
+
+		list.textContent = null;
+
+		let tabStart = Math.floor(Math.random() * 1000);
+
+		for(const row of data.values()) {
+
+			const
+				label = document.createElement('label'),
+				input = document.createElement('input'),
+				text = document.createElement('div');
+
+			label.setAttribute('tabIndex', tabStart);
+			tabStart += 1;
+
+			text.classList.add('option-name');
+			text.innerHTML = `<span>${row.name}</span>`;
+
+			if(row.subtitle && row.subtitle != '') {
+
+				const subtitle = document.createElement('span');
+				subtitle.classList.add('subtitle');
+
+				subtitle.innerHTML = row.subtitle;
+				text.appendChild(subtitle);
+			}
+
+			input.name = this.inputName;
+			input.type = this.multiple ? 'checkbox' : 'radio';
+
+			label.appendChild(input);
+			label.appendChild(text);
+
+			label.setAttribute('title', row.value);
+
+			input.on('change', () => {
+
+				if(!this.multiple) {
+
+					this.selectedValues.clear();
+					this.selectedValues.add(row.value);
+				}
+				else {
+
+					input.checked && this.selectedValues.size < (this.maxSelections || Math.min()) ? this.selectedValues.add(row.value) : this.selectedValues.delete(row.value);
+				}
+
+				this.setScreenText();
+
+				this.recalculate();
+				this.fireCallback('change');
+			});
+
+			input.on('focus', () => label.classList.add('hover'));
+			input.on('focusout', () => label.classList.remove('hover'));
+
+			input.disabled = this.disabled;
+			row.input = input;
+
+			label.on('dblclick', e => {
+
+				e.stopPropagation();
+
+				this.clear();
+				label.click();
+			});
+
+			label.classList.toggle('grey', this.disabled);
+
+			list.appendChild(label);
+		}
+
+		this.recalculate();
+	}
+
+	/**
+	 * Remove the multiselect's container from DOM.
+	 */
+	remove() {
+
+		if(this.containerElement) {
+			this.container.remove();
+		}
+	}
+
+	/**
+	 * Recalculate shown items from the datalist based on any value in search box and their summary numbers in the footer.
+	 */
+	recalculate() {
+
+		if(!this.containerElement) {
+
+			return;
+		}
+
+		if(!this.optionsContainer) {
+
+			this.fireCallback('change');
+			return this.setScreenText();
+		}
+
+		this.options.querySelector('select[name=mode]').value = this.mode;
+
+		for(const row of this._datalist.values()) {
+
+			row.input.checked = this.selectedValues.has(row.value);
+
+			row.input.disabled = this.disabled || (!row.input.checked && this.maxSelections && this.selectedValues.size == this.maxSelections);
+			row.input.parentElement.classList.toggle('grey', row.input.disabled);
+
+			row.hide = false;
+
+			if(this.filterDataMap && !this.filterDataMap.has(row.value)) {
+
+				row.hide = true;
+			}
+
+			row.input.parentElement.classList.toggle('hidden', row.hide);
+			row.input.parentElement.classList.toggle('selected', row.input.checked);
+		}
+
+		this.search.globalSearch.container.querySelector('.advanced').classList.toggle('hidden', this.mode != 'expand');
+
+		const footer = this.options.querySelector('footer');
+
+		footer.innerHTML = `
+			<span>Total: <strong>${this._datalist.size}</strong></span>
+			<span>Selected: <strong>${this.selectedValues.size}</strong></span>
+		`;
+
+		if(this.filterDataMap && this.filterDataMap.size != this._datalist.size) {
+
+			footer.insertAdjacentHTML('beforeend', `<span>Showing: <strong>${this.filterDataMap.size}</strong></span>`);
+		}
+
+		this.setScreenText();
+
+		if(this.maxSelections && this.multiple) {
+
+			footer.insertAdjacentHTML('beforeend', `<span>Max Selections: <strong>${this.maxSelections}</strong></span>`);
+		}
+
+		this.options.querySelector('.no-matches').classList.toggle('hidden', this.search.filterData.length);
+		this.options.querySelector('.list').classList.toggle('hidden', !this.search.filterData.length);
+	}
+
+	/**
+	 * Assign a callback to the MultiSelect.
+	 *
+	 * @param  string	event		The type of event. Only 'change' supported for now.
+	 * @param  Function	callback	The callback to call when the selected value in the multiselect changes.
+	 */
+	on(event, callback) {
+
+		this.callbacks.add({event, callback});
+	}
+
+	fireCallback(event) {
+
+		for(const callback of this.callbacks) {
+
+			if(callback.event == event)
+				callback.callback();
+		}
+	}
+
+	/**
+	 * Select all inputs of the MultiSelect, if applicable.
+	 * May not be applicable if multiple is set to false.
+	 */
+	all() {
+
+		if(!this.multiple || this.disabled || !this._datalist) {
+
+			return;
+		}
+
+		this.selectedValues.clear();
+
+		for(const data of this._datalist.values()) {
+
+			if(data.hide || (this.maxSelections && this.selectedValues.size >= this.maxSelections)) {
+
+				continue;
+			}
+
+			this.selectedValues.add(data.value);
+		}
+
+		this.recalculate();
+		this.fireCallback('change');
+	}
+
+	/**
+	 * Clear the MultiSelect.
+	 */
+	clear() {
+
+		if(this.disabled) {
+
+			return;
+		}
+
+		for(const data of this._datalist.values()) {
+
+			if (!data.hide) {
+
+				this.selectedValues.delete(data.value)
+			}
+		}
+
+		this.recalculate();
+		this.fireCallback('change');
+	}
+
+	reset() {
+
+		if(this.disabled || !this.optionsContainer) {
+
+			return;
+		}
+
+		this.search.clear();
+		this.selectedValues.clear();
+
+		if(this.filterDataMap) {
+
+			this.filterDataMap = new Map(this.search.filterData.map(x => [x.value, x]));
+		}
+
+		this.recalculate();
+		this.fireCallback('change');
+	}
+
+	setScreenText() {
+
+		if(!this.selectedValues.size) {
+
+			return this.screen.textContent = 'No items selected.';
+		}
+
+		const first = this._datalist.get(this.selectedValues.values().next().value);
+
+		this.screen.innerHTML = this.selectedValues.size > 1 ? `${first.name} and ${this.selectedValues.size - 1} more` : first.name;
+	}
+
+	get datalist() {
+
+		return this._datalist ? [...this._datalist.values()] : [];
+	}
+
+	set datalist(datalist) {
+
+		if(Array.isArray(datalist) && datalist.length) {
+
+			this._datalist = new Map(datalist.map(x => [x.value, x]));
+		}
+		else if (datalist instanceof Map) {
+
+			this._datalist = datalist;
+		}
+		else {
+
+			this._datalist = new Map();
+		}
+
+		for(const value of this.selectedValues) {
+
+			if(!this._datalist.has(value)) {
+
+				this.selectedValues.delete(value);
+			}
+		}
+
+		if(this.optionsContainer) {
+
+			this.search.data =  [...this._datalist.values()];
+		}
+
+		this.fireCallback('change');
+	}
+
+	/**
+	 * Update the value of a MultiSelect.
+	 * This will also take care of updating the UI and fire any change callbacks if needed.
+	 *
+	 * @param  Array	values	The array of new values that must match the datalist.
+	 */
+	set value(values = []) {
+
+		if(!(this._datalist && this._datalist.size)) {
+
+			return;
+		}
+
+		if(!Array.isArray(values)) {
+
+			values = [values];
+		}
+
+		this.selectedValues.clear();
+
+		for(const value of values) {
+
+			if(!this._datalist.has(value) || (this.maxSelections && this.selectedValues.size >= this.maxSelections)) {
+
+				continue;
+			}
+
+			this.selectedValues.add(value);
+
+			if (!this.multiple) {
+
+				break;
+			}
+		}
+
+		this.recalculate();
+		this.fireCallback('change');
+	}
+
+	/**
+	 * Get the current value of the MultiSelect.
+	 *
+	 * @return Array	An array of 'value' properties of the datalist.
+	 */
+	get value() {
+
+		return Array.from(this.selectedValues);
+	}
+
+	/**
+	 * Change the disabled state of the MultiSelect.
+	 *
+	 * @param  boolean value The new state of the disabled property.
+	 */
+	set disabled(value) {
+
+		this._disabled = value;
+		this.render();
+	}
+
+	/**
+	 * Get the disabled status of the MultiSelect.
+	 */
+	get disabled() {
+
+		return this._disabled;
+	}
+}
+
+/**
+ * Show a snackbar type notification somewhere on screen.
+ */
+class SnackBar {
+
+	static setup() {
+
+		SnackBar.container = {
+			'bottom-left': document.createElement('div'),
+		};
+
+		SnackBar.container['bottom-left'].classList.add('snack-bar-container', 'bottom-left', 'hidden');
+
+		document.body.appendChild(SnackBar.container['bottom-left']);
+	}
+
+	/**
+	 * Create a new Snackbar notification instance. This will show the notfication instantly.
+	 *
+	 * @param String	options.message		The message body.
+	 * @param String	options.subtitle	The messgae subtitle.
+	 * @param String	options.type		success (green), warning (yellow), error (red).
+	 * @param String	options.icon		A font awesome name for the snackbar icon.
+	 * @param Number	options.timeout		(Seconds) How long the notification will be visible.
+	 * @param String	options.position	bottom-left (for now).
+	 */
+	constructor({message = null, subtitle = null, type = 'success', icon = null, timeout = 5, position = 'bottom-left'} = {}) {
+
+		this.container = document.createElement('div');
+		this.page = window.page;
+
+		this.message = message;
+		this.subtitle = subtitle;
+		this.type = type;
+		this.icon = icon;
+		this.timeout = parseInt(timeout);
+		this.position = position;
+
+		if(!this.message)
+			throw new Page.exception('SnackBar Message is required.');
+
+		if(!parseInt(this.timeout))
+			throw new Page.exception(`Invalid SnackBar timeout: ${this.timeout}.`);
+
+		if(!['success', 'warning', 'error'].includes(this.type))
+			throw new Page.exception(`Invalid SnackBar type: ${this.type}.`);
+
+		if(!['bottom-left'].includes(this.position))
+			throw new Page.exception(`Invalid SnackBar position: ${this.position}.`);
+
+		if(this.subtitle && this.subtitle.length > 250)
+			this.subtitle = this.subtitle.substring(0, 250) + '&hellip;';
+
+		this.show();
+	}
+
+	show() {
+
+		if(document.fullscreenElement) {
+
+			document.exitFullscreen();
+		}
+
+		let icon = null;
+
+		if(this.icon)
+			icon = this.icon;
+
+		else if(this.type == 'success')
+			icon = 'fas fa-check';
+
+		else if(this.type == 'warning')
+			icon = 'fas fa-exclamation-triangle';
+
+		else if(this.type == 'error')
+			icon = 'fas fa-exclamation-triangle';
+
+		let subtitle = '';
+
+		if(this.subtitle)
+			subtitle = `<div class="subtitle">${this.subtitle}</div>`;
+
+		this.container.innerHTML = `
+			<div class="icon"><i class="${icon}"></i></div>
+			<div class="title ${subtitle ? '' : 'no-subtitle'}">${this.message}</div>
+			${subtitle}
+			<div class="close">&times;</div>
+		`;
+
+		this.container.classList.add('snack-bar', this.type);
+
+		this.container.on('click', () => this.hide());
+
+		// Add the show class out of the current event loop so that CSS transitions have time to initiate.
+		setTimeout(() => this.container.classList.add('show'));
+
+		// Hide the snackbar after the timeout.
+		setTimeout(() => this.hide(), this.timeout * 1000);
+
+		SnackBar.container[this.position].classList.remove('hidden');
+		SnackBar.container[this.position].appendChild(this.container);
+		SnackBar.container[this.position].scrollTop = SnackBar.container[this.position].scrollHeight;
+	}
+
+	/**
+	 * Hide the snack bar and also hide the container if no other snackbar is in the container.
+	 */
+	hide() {
+
+		this.container.classList.remove('show');
+
+		setTimeout(() => {
+
+			this.container.remove();
+
+			if(!SnackBar.container[this.position].children.length)
+				SnackBar.container[this.position].classList.add('hidden');
+
+		}, Page.transitionDuration);
+	}
+}
+
+/**
+ * A generic implementation for a modal box.
+ *
+ * It has the following features.
+ *
+ * - Lets users set the heading, body content and footer of the dialog.
+ * - Provides a clean interface with user controlled show and hide features.
+ */
+class DialogBox {
+
+	constructor({closable = true} = {}) {
+
+		this.closable = closable;
+	}
+
+	/**
+	 * The main container of the Dialog Box.
+	 *
+	 * @return	HTMLElement	A div that has the entire content.
+	 */
+	get container() {
+
+		// Make sure we have a container to append the dialog box in
+		if(!DialogBox.container) {
+			throw new Page.exception('Dialog Box container not defined before use!');
+		}
+
+		if(this.containerElement) {
+			return this.containerElement;
+		}
+
+		const container = this.containerElement = document.createElement('div');
+
+		container.classList.add('dialog-box-blanket');
+
+		container.innerHTML = `
+			<section class="dialog-box">
+				<header><h3></h3></header>
+				<div class="body"></div>
+			</section>
+		`;
+
+		if(this.closable) {
+
+			container.querySelector('header').insertAdjacentHTML(
+				'beforeend',
+				'<span class="close"><i class="fa fa-times"></i></span>'
+			);
+
+			container.querySelector('.dialog-box header span.close').on('click', () => this.hide());
+
+			container.on('click', () => this.hide());
+		}
+
+		container.querySelector('.dialog-box').on('click', e => e.stopPropagation());
+
+		this.hide();
+
+		return container;
+	}
+
+	/**
+	 * Update the heading of the dialog box
+	 *
+	 * @param	dialogHeading	The new heading
+	 */
+	set heading(dialogHeading) {
+
+		const heading = this.container.querySelector('.dialog-box header h3');
+
+		if(dialogHeading instanceof HTMLElement) {
+
+			heading.textContent = null;
+			heading.appendChild(dialogHeading);
+		}
+
+		else if(typeof dialogHeading == 'string') {
+			heading.innerHTML = dialogHeading;
+		}
+
+		else {
+			throw new Page.exception('Invalid heading format');
+		}
+	}
+
+	/**
+	 *
+	 * @return HTMLElement	reference to the dialog box body container to set the content of the dialog box.
+	 */
+	get body() {
+
+		return this.container.querySelector('.dialog-box .body');
+	}
+
+	/**
+	 * Hides the dialog box container
+	 */
+	hide() {
+
+		this.container.remove();
+
+		if(this.closeCallback) {
+			this.closeCallback();
+		}
+
+		// If another dialog box is open then don't remove blur
+		if(!document.body.querySelector('.dialog-box-blanket .dialog-box')) {
+			document.querySelector('main').classList.remove('blur');
+			document.querySelector('header').classList.remove('blur');
+			NotificationBar.container.classList.remove('blur');
+		}
+	}
+
+	/**
+	 * Displays the dialog box container
+	 */
+	show() {
+
+		if(document.fullscreenElement) {
+			document.exitFullscreen();
+		}
+
+		if(this.closable) {
+
+			document.body.removeEventListener('keyup', this.keyUpListener);
+
+			document.body.on('keyup', this.keyUpListener = e => {
+
+				if(e.keyCode == 27) {
+					this.hide();
+				}
+			});
+		}
+
+		document.querySelector('main').classList.add('blur');
+		document.querySelector('header').classList.add('blur');
+		NotificationBar.container.classList.add('blur');
+
+		DialogBox.container.appendChild(this.container);
+	}
+
+	/**
+	 * Returns the current state of the dialog box (open / closed)
+	 */
+	get status() {
+		return document.contains(this.container);
+	}
+
+	on(event, callback) {
+
+		if(event != 'close') {
+			throw new Page.exception('Only Close event is supported...');
+		}
+
+		this.closeCallback = callback;
+	}
+}
+
+/**
  * A generic code editor UI.
  *
  * Useage:
