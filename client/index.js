@@ -169,36 +169,6 @@ router.get('/compare-schema', API.serve(class extends HTMLAPI {
 	}
 }));
 
-router.get('/trello-summary', API.serve(class extends HTMLAPI {
-
-	constructor() {
-
-		super();
-
-		this.stylesheets.push('css/trello-summary.css');
-		this.scripts.push('js/trello-summary.js');
-	}
-
-	async main() {
-
-		return `
-
-			<h1>Trello Sumamary</h1>
-
-			<div class="menu">
-				<button id="release-notes"><i class="fas fa-clipboard-list"></i> Release Notes</button>
-				<button id="product-updates"><i class="fas fa-pen-nib"></i> Product Updates</button>
-				<button id="reset"><i class="fas fa-undo"></i> Reset</button>
-				<label id="download-complete"><input type="checkbox" checked> Complete</label>
-			</div>
-
-			<div id="trello-summary" class="block" contenteditable>
-				<div class="NA">Summary not loaded yet</div>
-			</div>
-		`;
-	}
-}));
-
 router.get('/get-schema',API.serve(class extends HTMLAPI {
 
 	constructor() {

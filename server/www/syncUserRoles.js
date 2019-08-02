@@ -61,7 +61,7 @@ class SyncUserRoles extends API {
 	async syncUser() {
 
 		await this.mysql.query(
-			`INSERT IGNORE INTO tb_users (
+			`INSERT INTO tb_users (
 				account_id,
 				phone,
 				email,
