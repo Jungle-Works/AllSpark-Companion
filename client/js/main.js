@@ -591,6 +591,82 @@ class SearchColumnFilters extends Set {
 		this.render();
 	}
 
+	static types() {
+
+		return [
+			{
+				slug: 'values',
+				name: 'Values',
+				apply: (q, v) => !q || !q.length || q.includes(v),
+			},
+			{
+				slug: 'contains',
+				name: 'Contains',
+				apply: (q, v) => v.toString().toLowerCase().includes(q.toString().toLowerCase()),
+			},
+			{
+				slug: 'notcontains',
+				name: 'Not Contains',
+				apply: (q, v) => !v.toString().toLowerCase().includes(q.toString().toLowerCase()),
+			},
+			{
+				slug: 'startswith',
+				name: 'Starts With',
+				apply: (q, v) => v.toString().toLowerCase().startsWith(q.toString().toLowerCase()),
+			},
+			{
+				slug: 'endswith',
+				name: 'Ends With',
+				apply: (q, v) => v.toString().toLowerCase().endsWith(q.toString().toLowerCase()),
+			},
+			{
+				slug: 'empty',
+				name: 'Is Empty',
+				apply: (q, v) => ['', null].includes(v.toString().trim()),
+			},
+			{
+				slug: 'notempty',
+				name: 'Is Not Empty',
+				apply: (q, v) => !['', null].includes(v.toString().trim()),
+			},
+			{
+				slug: 'equalto',
+				name: '=',
+				apply: (q, v) => v.toString().toLowerCase() == q.toString().toLowerCase(),
+			},
+			{
+				slug: 'notequalto',
+				name: '!=',
+				apply: (q, v) => v.toString().toLowerCase() != q.toString().toLowerCase(),
+			},
+			{
+				slug: 'greaterthan',
+				name: '>',
+				apply: (q, v) => v > q,
+			},
+			{
+				slug: 'lessthan',
+				name: '<',
+				apply: (q, v) => v < q,
+			},
+			{
+				slug: 'greaterthanequalsto',
+				name: '>=',
+				apply: (q, v) => v >= q,
+			},
+			{
+				slug: 'lessthanequalto',
+				name: '<=',
+				apply: (q, v) => v <= q,
+			},
+			{
+				slug: 'regularexpression',
+				name: 'RegExp',
+				apply: (q, v) => v.toString().match(new RegExp(q, 'i')),
+			},
+		];
+	}
+
 	get container() {
 
 		if(this.containerElement)
@@ -722,7 +798,7 @@ class SearchColumnFilter {
 			}
 		});
 
-		for(const filter of DataSourceColumnFilter.types) {
+		for(const filter of SearchColumnFilters.types) {
 
 			if(filter.slug == 'values') {
 				continue;
@@ -772,7 +848,7 @@ class SearchColumnFilter {
 			return false;
 		}
 
-		for(const column of DataSourceColumnFilter.types) {
+		for(const column of SearchColumnFilters.types) {
 
 			if(values.functionName != column.slug) {
 				continue;
@@ -846,7 +922,7 @@ class GlobalColumnSearchFilter extends SearchColumnFilter {
 
 		const
 			query = super.container.querySelector('.searchQuery').value,
-			[contains] = DataSourceColumnFilter.types.filter(x => x.slug == 'contains');
+			[contains] = SearchColumnFilters.types.filter(x => x.slug == 'contains');
 
 		if(!query)
 			return true;
@@ -1437,7 +1513,7 @@ class MultiSelect {
 
 		if(Array.isArray(datalist) && datalist.length) {
 
-			this._datalist = new Map(datalist.map(x => [x.value, x]));
+			this._datalist = new Map(datalist.map(x => [x.value, Object.assign({}, x)]));
 		}
 		else if (datalist instanceof Map) {
 
