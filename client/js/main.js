@@ -573,6 +573,296 @@ class Sections {
 }
 
 /**
+ *  Global and advance search bar
+ */
+class SearchColumnFilters extends Set {
+
+	constructor({ filters, advancedSearch = true, data = [] } = {}) {
+
+		super();
+
+		this.data = data;
+		this.filters = filters;
+
+		this.globalSearch = new GlobalColumnSearchFilter(this, advancedSearch);
+
+		this.add(this.globalSearch);
+
+		this.render();
+	}
+
+	get container() {
+
+		if(this.containerElement)
+			return this.containerElement;
+
+		const container = this.containerElement = document.createElement('div');
+
+		container.classList.add('hidden', 'search-column-filters');
+
+		container.innerHTML = `
+			<div class="filters"></div>
+			<button type="button" class="add-filter">
+				<i class="fa fa-plus"></i>
+				Add New Parameter
+			</button>
+		`;
+
+		container.querySelector('.add-filter').on('click', () => {
+
+			this.add(new SearchColumnFilter(this));
+			this.render();
+			container.scrollTop = container.scrollHeight;
+
+		});
+
+		return container;
+	}
+
+	render() {
+
+		const filters = this.container.querySelector('.filters');
+		filters.textContent = null;
+
+		for(const filter of this) {
+
+			if(filter != this.globalSearch)
+				filters.appendChild(filter.container);
+		}
+
+		if(this.size < 2)
+			filters.innerHTML = '<div class="NA">No Filters Added</div>';
+	}
+
+	clear() {
+
+		for(const filter of this) {
+
+			if(filter != this.globalSearch) {
+
+				this.delete(filter);
+			}
+		}
+
+		this.render();
+	}
+
+	on(event, callback) {
+
+		if(event != 'change') {
+			return;
+		}
+
+		this.changeCallback = callback;
+	}
+
+	get filterData() {
+
+		const filterData = [];
+
+		outer:
+			for(const row of this.data) {
+
+				for(const filter of this) {
+
+					if(!filter.checkRow(row))
+						continue outer;
+				}
+
+				filterData.push(row);
+			}
+
+		return filterData;
+	}
+}
+
+class SearchColumnFilter {
+
+	constructor(searchColumns) {
+
+		this.searchColumns = searchColumns;
+	}
+
+	get container() {
+
+		if(this.containerElement)
+			return this.containerElement;
+
+		const container = this.containerElement = document.createElement('div');
+		container.classList.add('search-column-filter');
+
+		container.innerHTML = `
+			<select class="searchValue"></select>
+			<select class="searchType"></select>
+			<input type="search" class="searchQuery" placeholder="Search">
+			<button type="button" class="delete"><i class="far fa-trash-alt delete-icon"></i></button>
+		`;
+
+		const
+			searchType = container.querySelector('.searchType'),
+			searchQuery = container.querySelector('.searchQuery');
+
+		searchQuery.on('keyup', () => this.searchColumns.changeCallback());
+		searchQuery.on('search', () => this.searchColumns.changeCallback());
+
+		searchQuery.on('click', e => e.stopPropagation());
+
+		for(const select of container.querySelectorAll('select')) {
+			select.on('change', () => this.searchColumns.changeCallback());
+		}
+
+		searchType.on('change', () => {
+
+			const disabled = ['empty', 'notempty'].includes(searchType.value);
+
+			searchQuery.disabled = disabled;
+
+			if(disabled) {
+				searchQuery.value = '';
+			}
+		});
+
+		for(const filter of DataSourceColumnFilter.types) {
+
+			if(filter.slug == 'values') {
+				continue;
+			}
+
+			searchType.insertAdjacentHTML('beforeend', `
+				<option value="${filter.slug}">
+					${filter.name}
+				</option>
+			`);
+		}
+
+		const searchValue = container.querySelector('select.searchValue');
+
+		for(const column of this.searchColumns.filters) {
+
+			searchValue.insertAdjacentHTML('beforeend', `
+				<option value="${column.key}">
+					${column.key}
+				</option>
+			`);
+		}
+
+		container.querySelector('.delete').on('click', () => {
+
+			this.searchColumns.delete(this);
+
+			this.searchColumns.changeCallback();
+
+			this.searchColumns.render();
+		});
+
+		return container;
+	}
+
+	checkRow(row) {
+
+		const values = this.json;
+
+		if(!values.query) {
+			return true;
+		}
+
+		const [columnValue] = this.searchColumns.filters.filter(f => f.key == values.columnName).map(m => m.rowValue(row));
+
+		if(!columnValue || !columnValue.length) {
+			return false;
+		}
+
+		for(const column of DataSourceColumnFilter.types) {
+
+			if(values.functionName != column.slug) {
+				continue;
+			}
+
+			for(const value of columnValue) {
+
+				if(value != null && column.apply(values.query, value)) {
+					return true;
+				}
+			}
+
+			return false;
+		}
+	}
+
+	get json() {
+
+		return {
+			columnName: this.container.querySelector('select.searchValue').value,
+			functionName: this.container.querySelector('select.searchType').value,
+			query: this.container.querySelector('.searchQuery').value,
+		};
+	}
+
+	set json(values = {}) {
+
+		this.container.querySelector('select.searchValue').value = values.searchValue;
+		this.container.querySelector('select.searchType').value = values.searchType;
+		this.container.querySelector('.searchQuery').value = values.searchQuery;
+	}
+}
+
+class GlobalColumnSearchFilter extends SearchColumnFilter {
+
+	constructor(searchColumns, advancedSearch) {
+
+		super(searchColumns);
+
+		this.searchColumns = searchColumns;
+		this.advancedSearch = advancedSearch;
+	}
+
+	get container() {
+
+		if(this.containerElement) {
+			return this.containerElement;
+		}
+
+		const container = this.containerElement = super.container;
+
+		container.classList.add('global-filter');
+		container.querySelector('.searchValue').classList.add('hidden');
+		container.querySelector('.searchType').classList.add('hidden');
+		container.querySelector('.delete').classList.add('hidden');
+
+		if(this.advancedSearch) {
+
+			container.insertAdjacentHTML('beforeend','<button type="button" class="advanced"><i class="fa fa-angle-down"></i></button>');
+
+			container.querySelector('.advanced').on('click', () => {
+				this.searchColumns.container.classList.toggle('hidden');
+				container.querySelector('.advanced').classList.toggle('selected');
+
+			});
+		}
+		return container;
+	}
+
+	checkRow(row) {
+
+		const
+			query = super.container.querySelector('.searchQuery').value,
+			[contains] = DataSourceColumnFilter.types.filter(x => x.slug == 'contains');
+
+		if(!query)
+			return true;
+
+		for(const column of this.searchColumns.filters) {
+
+			for(const value of column.rowValue(row)) {
+
+				if(value && contains.apply(query, value))
+					return true;
+			}
+		}
+	}
+}
+
+/**
  * A generic implementation for a multiple select dropdown.
  *
  * It has the following features.
