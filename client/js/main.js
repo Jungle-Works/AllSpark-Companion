@@ -798,7 +798,7 @@ class SearchColumnFilter {
 			}
 		});
 
-		for(const filter of SearchColumnFilters.types) {
+		for(const filter of SearchColumnFilters.types()) {
 
 			if(filter.slug == 'values') {
 				continue;
@@ -848,7 +848,7 @@ class SearchColumnFilter {
 			return false;
 		}
 
-		for(const column of SearchColumnFilters.types) {
+		for(const column of SearchColumnFilters.types()) {
 
 			if(values.functionName != column.slug) {
 				continue;
@@ -922,7 +922,7 @@ class GlobalColumnSearchFilter extends SearchColumnFilter {
 
 		const
 			query = super.container.querySelector('.searchQuery').value,
-			[contains] = SearchColumnFilters.types.filter(x => x.slug == 'contains');
+			[contains] = SearchColumnFilters.types().filter(x => x.slug == 'contains');
 
 		if(!query)
 			return true;
